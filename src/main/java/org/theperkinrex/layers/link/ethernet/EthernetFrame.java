@@ -3,15 +3,16 @@ package org.theperkinrex.layers.link.ethernet;
 import org.theperkinrex.layers.link.LinkFrame;
 import org.theperkinrex.layers.link.mac.MAC;
 import org.theperkinrex.layers.net.NetPacket;
+import org.theperkinrex.layers.net.ipv4.IPv4Packet;
 
-public class EthernetPacket implements LinkFrame {
-    private final NetPacket payload;
+public class EthernetFrame implements LinkFrame {
+    public final NetPacket payload;
     public final MAC destination;
-    public final MAC source;
+    public MAC source;
     public final EtherType etherType;
     public final Dot1qTag dot1qTag;
 
-    public EthernetPacket(NetPacket payload, MAC destination, MAC source, EtherType etherType, Dot1qTag dot1qTag) {
+    public EthernetFrame(NetPacket payload, MAC destination, MAC source, EtherType etherType, Dot1qTag dot1qTag) {
         this.payload = payload;
         this.destination = destination;
         this.source = source;
@@ -19,13 +20,20 @@ public class EthernetPacket implements LinkFrame {
         this.dot1qTag = dot1qTag;
     }
 
-    public EthernetPacket(NetPacket payload, MAC destination, MAC source, EtherType etherType) {
+    public EthernetFrame(NetPacket payload, MAC destination, MAC source, EtherType etherType) {
         this(payload, destination, source, etherType, null);
     }
 
-    @Override
-    public NetPacket encapsulated() {
-        return this.payload;
+    public EthernetFrame(NetPacket payload, MAC destination, EtherType etherType, Dot1qTag dot1qTag) {
+        this(payload, destination, null, etherType, dot1qTag);
+    }
+
+    public EthernetFrame(NetPacket payload, MAC destination, EtherType etherType) {
+        this(payload, destination, etherType, null);
+    }
+
+    public EthernetFrame(IPv4Packet payload, MAC destination, MAC source) {
+        this(payload, destination, source, EtherType.IP_V4, null);
     }
 
     public static class EtherType {
@@ -53,6 +61,15 @@ public class EthernetPacket implements LinkFrame {
         public static final EtherType IP_V4 = new EtherType(0x0800);
         public static final EtherType IP_V6 = new EtherType(0x86DD);
         public static final EtherType ARP = new EtherType(0x0806);
+        public static final EtherType SIMPLE = new EtherType(0x0000);
+
+        @Override
+        public String toString() {
+            if (type == IP_V4.type) return "IP_V4";
+            if (type == IP_V6.type) return "IP_V6";
+            if (type == ARP.type) return "ARP";
+            return "EtherType(" + type + ')';
+        }
     }
 
     public static class Dot1qTag {
@@ -80,5 +97,25 @@ public class EthernetPacket implements LinkFrame {
         public int hashCode() {
             return vlan_id;
         }
+
+        @Override
+        public String toString() {
+            return "Dot1qTag{" +
+                    "priority_code_point=" + priority_code_point +
+                    ", drop_elegible=" + drop_elegible +
+                    ", vlan_id=" + vlan_id +
+                    '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "EthernetFrame{" +
+                "payload=" + payload +
+                ", destination=" + destination +
+                ", source=" + source +
+                ", etherType=" + etherType +
+                ", dot1qTag=" + dot1qTag +
+                '}';
     }
 }
