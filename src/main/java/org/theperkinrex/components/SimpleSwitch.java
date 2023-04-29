@@ -52,10 +52,12 @@ public class SimpleSwitch {
                         for (int i = 0; i < ports.length; i++) {
                             Port port = ports[i];
                             if (i != m.origin && port.channel != null) {
+//                                System.out.println("Sending frame received on " + m.origin + " to " + i);
                                 port.channel.send(m.frame);
                             }
                         }
                     } else {
+//                        System.out.println("Cached destination: " + c.port + " for " + m.frame.destination);
                         Port port = ports[c.port];
                         if (port != null) {
                             port.channel.send(m.frame);
@@ -77,6 +79,7 @@ public class SimpleSwitch {
             try {
                 while (true) {
                     EthernetFrame m = channel.receive();
+//                    System.out.println("Received on port " + port);
                     cache.put(m.source, new Cache(port, Instant.now()));
                     sendQueue.add(new Message(m, port));
                 }

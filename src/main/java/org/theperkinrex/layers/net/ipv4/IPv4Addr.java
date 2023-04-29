@@ -1,6 +1,8 @@
 package org.theperkinrex.layers.net.ipv4;
 
-public class IPv4Addr {
+import org.theperkinrex.layers.net.NetAddr;
+
+public class IPv4Addr implements NetAddr {
     private final int addr;
 
     public IPv4Addr(int addr) {
@@ -29,5 +31,10 @@ public class IPv4Addr {
     @Override
     public String toString() {
         return String.format("%d.%d.%d.%d", (addr >> 24) & 0xff, (addr >> 16) & 0xff, (addr >> 8) & 0xff, addr & 0xff);
+    }
+
+    @Override
+    public String name() {
+        return "inet";
     }
 }
