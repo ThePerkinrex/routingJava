@@ -2,11 +2,51 @@ package org.theperkinrex.layers.net.ipv4;
 
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.net.NetAddr;
+import org.theperkinrex.layers.net.NetMask;
 
 import java.text.ParseException;
 import java.util.Scanner;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 public class IPv4Addr implements NetAddr {
+    public static class Mask implements NetMask<IPv4Addr> {
+        private final int mask;
+
+        public Mask(IPv4Addr mask) {
+            this.mask = mask.addr;
+        }
+
+        public Mask(byte bits) {
+            if (bits > 32) throw new IllegalArgumentException("too many bits: " + bits);
+            int res = 0;
+            for (int i = (32-bits); i < 32; i++) {
+                res |= 1 << i;
+            }
+            this.mask = res;
+        }
+
+        public IPv4Addr asAddr() {
+            return new IPv4Addr(mask);
+        }
+
+        @Override
+        public boolean matchesMasked(IPv4Addr a, IPv4Addr b) {
+            return (a.addr & mask) == (b.addr & mask);
+        }
+
+        @Override
+        public String toString() {
+            return "/" + Integer.bitCount(mask)+ " [" + asAddr() + "]";
+        }
+
+        @Override
+        public int order() {
+            return Integer.bitCount(mask);
+        }
+    }
+
     private final int addr;
 
     public IPv4Addr(int addr) {

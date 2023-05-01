@@ -4,7 +4,7 @@ import org.theperkinrex.conf.IfaceConf;
 import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.link.mac.authority.MACAuthority;
-import org.theperkinrex.process.ArpProcess;
+import org.theperkinrex.layers.net.arp.ArpProcess;
 import org.theperkinrex.process.Process;
 import org.theperkinrex.util.Pair;
 

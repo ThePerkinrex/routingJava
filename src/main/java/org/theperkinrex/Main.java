@@ -12,6 +12,7 @@ import org.theperkinrex.layers.link.mac.authority.SequentialAuthority;
 import org.theperkinrex.layers.net.SimplePacket;
 import org.theperkinrex.layers.net.ipv4.IPv4Addr;
 import org.theperkinrex.layers.net.ipv4.IPv4Packet;
+import org.theperkinrex.routing.RoutingTable;
 import org.theperkinrex.util.DuplexChannel;
 import org.theperkinrex.util.Pair;
 
@@ -78,10 +79,11 @@ public class Main {
         crecv.start();
         a.getIface(ID).iface().send(new SimplePacket("Adios"), new MAC("00-00-69-00-00-03"));
         b.getIface(ID).iface().send(new SimplePacket("desde b"), new MAC("00-00-69-00-00-01"));
-        a.arp.addRequest(new IPv4Addr("200.0.0.3"), (addr, id) -> System.out.println("A: 200.0.0.3 is " + addr + " on " + id));
-        a.arp.addRequest(new IPv4Addr("200.0.0.2"), (addr, id) -> System.out.println("A: 200.0.0.2 is " + addr + " on " + id));
-        c.arp.addRequest(new IPv4Addr("200.0.0.2"), (addr, id) -> System.out.println("C: 200.0.0.2 is " + addr + " on " + id));
         try {
+            a.arp.get(new IPv4Addr("200.0.0.3")).consume((addr, id) -> System.out.println("A: 200.0.0.3 is " + addr + " on " + id));
+            a.arp.get(new IPv4Addr("200.0.0.2")).consume((addr, id) -> System.out.println("A: 200.0.0.2 is " + addr + " on " + id));
+            c.arp.get(new IPv4Addr("200.0.0.1")).consume((addr, id) -> System.out.println("C: 200.0.0.1 is " + addr + " on " + id));
+
             Thread.sleep(3000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -93,5 +95,11 @@ public class Main {
         b.stop();
         c.stop();
         s.interrupt();
+
+        RoutingTable<IPv4Addr> r = new RoutingTable<>();
+        r.add(new IPv4Addr("200.0.0.0"), new IPv4Addr.Mask((byte) 24), ID);
+        r.add(new IPv4Addr(0), new IPv4Addr.Mask((byte) 0), ID, new IPv4Addr("200.0.0.1"));
+        System.out.println(r.getRoute(new IPv4Addr("200.0.0.2")));
+        System.out.println(r.getRoute(new IPv4Addr("1.1.1.1")));
     }
 }

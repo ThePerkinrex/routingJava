@@ -1,16 +1,17 @@
-package org.theperkinrex.process;
+package org.theperkinrex.layers.net.arp;
 
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.arp.ArpPacket;
+import org.theperkinrex.process.Process;
 import org.theperkinrex.util.Pair;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
 public class ArpProcess implements Process {
@@ -72,7 +73,7 @@ public class ArpProcess implements Process {
         return arpTable.get(addr);
     }
 
-    public void addRequest(NetAddr addr, BiConsumer<LinkAddr, Chassis.IfaceId<? extends Iface<? extends LinkAddr>>> consumer) {
+    private void addRequest(NetAddr addr, BiConsumer<LinkAddr, Chassis.IfaceId<? extends Iface<? extends LinkAddr>>> consumer) {
         Pair<LinkAddr, Chassis.IfaceId<? extends Iface<? extends LinkAddr>>> cached = getCached(addr);
         if (cached != null) {
             consumer.accept(cached.t, cached.u);
@@ -88,6 +89,16 @@ public class ArpProcess implements Process {
                 iface.u.iface().send(packet, iface.u.iface().addr().broadcast());
             }
         }
+    }
+
+    public Pair<LinkAddr, Chassis.IfaceId<? extends Iface<? extends LinkAddr>>> get(NetAddr addr, long timeout, TimeUnit timeUnit) throws InterruptedException {
+        BlockingQueue<Pair<LinkAddr, Chassis.IfaceId<? extends Iface<? extends LinkAddr>>>> q = new ArrayBlockingQueue<>(1);
+        addRequest(addr, (a, b) -> q.add(new Pair<>(a, b)));
+        return q.poll(timeout, timeUnit);
+    }
+
+    public Pair<LinkAddr, Chassis.IfaceId<? extends Iface<? extends LinkAddr>>> get(NetAddr addr) throws InterruptedException {
+        return get(addr, 500, TimeUnit.MILLISECONDS);
     }
 
     public void registerIface(Chassis.IfaceId<? extends Iface<? extends LinkAddr>> ifaceId, Chassis.IfaceData<LinkAddr, Iface<LinkAddr>> ifaceData) {
