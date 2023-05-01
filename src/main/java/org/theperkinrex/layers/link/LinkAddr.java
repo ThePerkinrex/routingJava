@@ -6,4 +6,6 @@ public interface LinkAddr {
     }
 
     LinkAddrKind kind();
+    LinkAddr zeroed();
+    LinkAddr broadcast();
 }

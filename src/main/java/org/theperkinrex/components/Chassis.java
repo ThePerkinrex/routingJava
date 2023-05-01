@@ -1,15 +1,14 @@
 package org.theperkinrex.components;
 
+import org.theperkinrex.conf.IfaceConf;
 import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.link.mac.authority.MACAuthority;
+import org.theperkinrex.process.ArpProcess;
 import org.theperkinrex.process.Process;
 import org.theperkinrex.util.Pair;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class Chassis implements Process {
     public static class IfaceId<I extends Iface<? extends LinkAddr>> {
@@ -31,11 +30,33 @@ public class Chassis implements Process {
         }
     }
 
-    private record IfaceData<A extends LinkAddr, I extends Iface<A>>(I iface) {
+    public record IfaceData<A extends LinkAddr, I extends Iface<A>>(I iface, IfaceConf conf) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            IfaceData<?, ?> ifaceData = (IfaceData<?, ?>) o;
+
+            if (!Objects.equals(iface, ifaceData.iface)) return false;
+            return Objects.equals(conf, ifaceData.conf);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = iface != null ? iface.hashCode() : 0;
+            result = 31 * result + (conf != null ? conf.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return iface.state() + "\n\tPhysical address: [" + iface.addrKind() + "] " + iface.addr() + "\n\t" + conf();
+        }
     }
 
     private final HashMap<Class<? extends Iface<? extends LinkAddr>>, ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>>> interfaces;
-
+    public final ArpProcess arp;
     private boolean started;
 
     @SuppressWarnings("unchecked")
@@ -43,52 +64,57 @@ public class Chassis implements Process {
         Class<? extends Iface<LinkAddr>> c = (Class<? extends Iface<LinkAddr>>) iface.getClass();
         ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>> ifaces = interfaces.computeIfAbsent(c, k -> new ArrayList<>());
         int idx = ifaces.size();
-        ifaces.add(new IfaceData<>((Iface<LinkAddr>) iface));
+        IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>> data = new IfaceData<>((Iface<LinkAddr>) iface, new IfaceConf());
+        ifaces.add(data);
+        IfaceId<I> ifaceId = new IfaceId<>((Class<I>) iface.getClass(), idx);
+        this.arp.registerIface(ifaceId, (IfaceData<LinkAddr, Iface<LinkAddr>>) data);
         if (started) iface.start();
-        //noinspection rawtypes
-        return new IfaceId<>((Class<I>) iface.getClass(), idx);
+        return ifaceId;
     }
 
     @SuppressWarnings("unchecked")
-    public Pair<IfaceId<? extends Iface<? extends LinkAddr>>, Iface<LinkAddr>>[] ifaces() {
-        LinkedList<Pair<IfaceId<? extends Iface<? extends LinkAddr>>, Iface<LinkAddr>>> res = new LinkedList<>();
+    public Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>>[] ifaces() {
+        LinkedList<Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>>> res = new LinkedList<>();
         for (Class<? extends Iface<? extends LinkAddr>> c :
                 interfaces.keySet()) {
             ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>> list = interfaces.get(c);
             for (int i = 0; i < list.size(); i++) {
                 IfaceId<? extends Iface<? extends LinkAddr>> id = (IfaceId<? extends Iface<? extends LinkAddr>>) new IfaceId<>(c, i);
-                res.add(new Pair<>(id, (Iface<LinkAddr>) list.get(i).iface));
+                res.add(new Pair<>(id, (IfaceData<LinkAddr, Iface<LinkAddr>>) list.get(i)));
             }
         }
-        return res.toArray((Pair<IfaceId<? extends Iface<? extends LinkAddr>>, Iface<LinkAddr>>[]) new Pair[res.size()]);
+        return res.toArray((Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>>[]) new Pair[res.size()]);
     }
 
-    public <A extends LinkAddr, I extends Iface<A>> I getIface(IfaceId<I> id) throws IndexOutOfBoundsException {
+    public <A extends LinkAddr, I extends Iface<A>> IfaceData<A, I> getIface(IfaceId<I> id) throws IndexOutOfBoundsException {
         if (!interfaces.containsKey(id.type))
             throw new IndexOutOfBoundsException(id + " is not a type of interface in this chassis");
         ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>> arr = interfaces.get(id.type);
         if (id.id >= arr.size()) throw new IndexOutOfBoundsException(id + " does not exist on this chassis");
-        return (I) arr.get(id.id).iface;
+        return (IfaceData<A, I>) arr.get(id.id);
     }
 
     public Chassis() {
         this.interfaces = new HashMap<>();
+        this.arp = new ArpProcess(this);
         this.started = false;
     }
 
     @Override
     public void start() {
         this.started = true;
-        for (Pair<IfaceId<? extends Iface<? extends LinkAddr>>, Iface<LinkAddr>> p : ifaces()) {
-            p.u.start();
+        this.arp.start();
+        for (Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>> p : ifaces()) {
+            p.u.iface.start();
         }
     }
 
     @Override
     public void stop() {
         this.started = false;
-        for (Pair<IfaceId<? extends Iface<? extends LinkAddr>>, Iface<LinkAddr>> p : ifaces()) {
-            p.u.stop();
+        this.arp.stop();
+        for (Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>> p : ifaces()) {
+            p.u.iface.stop();
         }
     }
 

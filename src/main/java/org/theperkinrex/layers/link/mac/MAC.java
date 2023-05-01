@@ -7,21 +7,25 @@ import java.util.Arrays;
 import java.util.Scanner;
 
 public class MAC implements LinkAddr {
+    public static final MAC DEFAULT = new MAC((byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0);
+    public static final MAC BROADCAST = new MAC((byte) 255, (byte) 255, (byte) 255, (byte) 255, (byte) 255, (byte) 255);
     private final byte[] address;
 
     public MAC(byte a, byte b, byte c, byte d, byte e, byte f) {
         this.address = new byte[]{a, b, c, d, e, f};
     }
 
-    public MAC(String mac) throws ParseException {
+    public MAC(String mac) {
         Scanner scn = new Scanner(mac);
         scn.useDelimiter("-");
-        this.address = new byte[]{scn.nextByte(16), scn.nextByte(16), scn.nextByte(16), scn.nextByte(16), scn.nextByte(16), scn.nextByte(16)};
+        this.address = new byte[]{scn.nextByte(16), scn.nextByte(16), scn.nextByte(16), scn.nextByte(16),
+                scn.nextByte(16), scn.nextByte(16)};
     }
 
     @Override
     public String toString() {
-        return String.format("%02X-%02X-%02X-%02X-%02X-%02X", address[0], address[1], address[2], address[3], address[4], address[5]);
+        return String.format("%02X-%02X-%02X-%02X-%02X-%02X", address[0], address[1], address[2], address[3],
+                address[4], address[5]);
     }
 
     @Override
@@ -31,7 +35,7 @@ public class MAC implements LinkAddr {
 
         MAC mac = (MAC) o;
 
-        return Arrays.equals(address, mac.address);
+        return Arrays.equals(address, mac.address) || Arrays.equals(mac.address, BROADCAST.address) || Arrays.equals(address, BROADCAST.address);
     }
 
     @Override
@@ -42,5 +46,15 @@ public class MAC implements LinkAddr {
     @Override
     public LinkAddrKind kind() {
         return LinkAddrKind.MAC;
+    }
+
+    @Override
+    public LinkAddr zeroed() {
+        return DEFAULT;
+    }
+
+    @Override
+    public LinkAddr broadcast() {
+        return BROADCAST;
     }
 }

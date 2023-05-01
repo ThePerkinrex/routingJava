@@ -1,6 +1,10 @@
 package org.theperkinrex.layers.net.ipv4;
 
+import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.net.NetAddr;
+
+import java.text.ParseException;
+import java.util.Scanner;
 
 public class IPv4Addr implements NetAddr {
     private final int addr;
@@ -11,6 +15,12 @@ public class IPv4Addr implements NetAddr {
 
     public IPv4Addr(byte a, byte b, byte c, byte d) {
         this(((int) a) << 24 + ((int) b) << 16 + ((int) c)  << 8 + ((int) d));
+    }
+
+    public IPv4Addr(String ip) {
+        Scanner scn = new Scanner(ip);
+        scn.useDelimiter("\\.");
+        this.addr = ((scn.nextInt() & 0xff) << 24) + ((scn.nextInt() & 0xff) << 16) + ((scn.nextInt() & 0xff)  << 8) + (scn.nextInt() & 0xff);
     }
 
     @Override
@@ -36,5 +46,10 @@ public class IPv4Addr implements NetAddr {
     @Override
     public String name() {
         return "inet";
+    }
+
+    @Override
+    public EthernetFrame.EtherType etherType() {
+        return EthernetFrame.EtherType.IP_V4;
     }
 }

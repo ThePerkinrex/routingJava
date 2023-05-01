@@ -10,6 +10,7 @@ import org.theperkinrex.layers.link.mac.MAC;
 import org.theperkinrex.layers.link.mac.authority.MACAuthority;
 import org.theperkinrex.layers.link.mac.authority.SequentialAuthority;
 import org.theperkinrex.layers.net.SimplePacket;
+import org.theperkinrex.layers.net.ipv4.IPv4Addr;
 import org.theperkinrex.layers.net.ipv4.IPv4Packet;
 import org.theperkinrex.util.DuplexChannel;
 import org.theperkinrex.util.Pair;
@@ -33,7 +34,7 @@ public class Main {
         public void run() {
             while (true) {
                 try {
-                    System.out.println(name + ": " + chassis.getIface(iface).receive(SimplePacket.class));
+                    System.out.println(name + ": " + chassis.getIface(iface).iface().receive(SimplePacket.class));
                 } catch (InterruptedException e) {
                     break;
                 }
@@ -46,34 +47,40 @@ public class Main {
         MACAuthority auth = new SequentialAuthority(0x00_00_69);
         Chassis.IfaceId<NIC> ID = new Chassis.IfaceId<>(NIC.class, 0);
         Chassis a = Chassis.SingleNIC(auth);
+        a.getIface(ID).conf().add(new IPv4Addr("200.0.0.1"));
         Chassis b = Chassis.SingleNIC(auth);
+        b.getIface(ID).conf().add(new IPv4Addr("200.0.0.2"));
         Chassis c = Chassis.SingleNIC(auth);
+        c.getIface(ID).conf().add(new IPv4Addr("200.0.0.3"));
         a.start();
         b.start();
         c.start();
 
         SimpleSwitch s = new SimpleSwitch(3, Duration.ofSeconds(1));
         DuplexChannel.ChannelPair<EthernetFrame> apair = DuplexChannel.createPair();
-        a.getIface(ID).connect(apair.a);
+        a.getIface(ID).iface().connect(apair.a);
         s.connect(0, apair.b);
 
         DuplexChannel.ChannelPair<EthernetFrame> bpair = DuplexChannel.createPair();
-        b.getIface(ID).connect(bpair.a);
+        b.getIface(ID).iface().connect(bpair.a);
         s.connect(1, bpair.b);
 
         DuplexChannel.ChannelPair<EthernetFrame> cpair = DuplexChannel.createPair();
-        c.getIface(ID).connect(cpair.a);
+        c.getIface(ID).iface().connect(cpair.a);
         s.connect(2, cpair.b);
 
-        a.getIface(ID).send(new SimplePacket("Hola"), new MAC("00-00-69-00-00-02"));
+        a.getIface(ID).iface().send(new SimplePacket("Hola"), new MAC("00-00-69-00-00-02"));
         Thread arecv = new Thread(new Receiver<>(a, ID, "A"));
         arecv.start();
         Thread brecv = new Thread(new Receiver<>(b, ID, "B"));
         brecv.start();
         Thread crecv = new Thread(new Receiver<>(c, ID, "C"));
         crecv.start();
-        a.getIface(ID).send(new SimplePacket("Adios"), new MAC("00-00-69-00-00-03"));
-        b.getIface(ID).send(new SimplePacket("desde b"), new MAC("00-00-69-00-00-01"));
+        a.getIface(ID).iface().send(new SimplePacket("Adios"), new MAC("00-00-69-00-00-03"));
+        b.getIface(ID).iface().send(new SimplePacket("desde b"), new MAC("00-00-69-00-00-01"));
+        a.arp.addRequest(new IPv4Addr("200.0.0.3"), (addr, id) -> System.out.println("A: 200.0.0.3 is " + addr + " on " + id));
+        a.arp.addRequest(new IPv4Addr("200.0.0.2"), (addr, id) -> System.out.println("A: 200.0.0.2 is " + addr + " on " + id));
+        c.arp.addRequest(new IPv4Addr("200.0.0.2"), (addr, id) -> System.out.println("C: 200.0.0.2 is " + addr + " on " + id));
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {

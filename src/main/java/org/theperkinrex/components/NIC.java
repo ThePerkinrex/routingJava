@@ -20,23 +20,24 @@ public class NIC implements Iface<MAC> {
 
     private final MAC mac;
     private final BlockingQueue<PayloadWithDest> sendQueue;
+    private final BlockingQueue<EthernetFrame> recvQueue;
     private DuplexChannel<EthernetFrame> conn;
-
-    private final ConcurrentHashMap<Class<? extends NetPacket>, BlockingQueue<PacketAddr<? extends NetPacket, MAC>>> freezer;
-
     private final Thread sender;
+    private final Thread receiver;
 
     public NIC(MAC mac) {
         this.mac = mac;
         this.conn = null;
         this.sendQueue = new LinkedBlockingQueue<>();
+        this.recvQueue = new LinkedBlockingQueue<>();
         this.sender = new Thread(sender());
-        this.freezer = new ConcurrentHashMap<>();
+        this.receiver = new Thread(receiver());
     }
 
     @Override
     public void start() {
         this.sender.start();
+        this.receiver.start();
     }
 
     public void connect(DuplexChannel<EthernetFrame> channel) {
@@ -58,24 +59,15 @@ public class NIC implements Iface<MAC> {
     @SuppressWarnings("unchecked")
     public <P extends NetPacket> PacketAddr<P, MAC> receive(Class<P> packetType) throws InterruptedException {
         EthernetFrame.EtherType etherType = NetPacket.ethertypeForClass(packetType);
-//        System.out.println("Trying freezer");
-        PacketAddr<P, MAC> packet = (PacketAddr<P, MAC>) Util.mapOrNull(freezer.get(packetType), q -> {
-            try {
-                return q.poll(0L, TimeUnit.MICROSECONDS);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+        while(true) {
+            EthernetFrame frame = recvQueue.take();
+            if(frame.etherType.equals(etherType)) {
+                return new PacketAddr<>((P) frame.payload, frame.destination);
+            }else{
+                recvQueue.add(frame);
             }
-        });
-        if (packet != null) return packet;
-        EthernetFrame frame;
-        do {
-            frame = receiveFrame();
-            if (!frame.etherType.equals(etherType)) {
-//                System.out.println("Putting packet in freezer " + frame);
-                freezer.computeIfAbsent(packetType, k -> new LinkedBlockingQueue<>()).add(new PacketAddr<>(frame.payload, frame.destination));
-            }
-        } while(!frame.etherType.equals(etherType));
-        return new PacketAddr<>((P) frame.payload, frame.destination);
+        }
+
     }
 
     @Override
@@ -86,7 +78,7 @@ public class NIC implements Iface<MAC> {
     public void send(NetPacket p, MAC dest) {
         sendQueue.add(new PayloadWithDest(p, dest));
     }
-    public Runnable sender() {
+    private Runnable sender() {
         return () -> {
                 while (true) {
                     PayloadWithDest p = null;
@@ -103,6 +95,24 @@ public class NIC implements Iface<MAC> {
         };
     }
 
+    private Runnable receiver() {
+        return () -> {
+            while(true) {
+                EthernetFrame frame;
+                try {
+                    frame = receiveFrame();
+                } catch (InterruptedException e) {
+                    break;
+                }
+                if (frame == null) {
+                    Thread.yield();
+                    continue;
+                }
+                recvQueue.add(frame);
+            }
+        };
+    }
+
     @Override
     public State state() {
         return this.conn == null ? State.DOWN : State.UP;
@@ -111,5 +121,6 @@ public class NIC implements Iface<MAC> {
     @Override
     public void stop() {
         sender.interrupt();
+        receiver.interrupt();
     }
 }

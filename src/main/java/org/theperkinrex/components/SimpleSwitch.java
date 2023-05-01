@@ -45,6 +45,7 @@ public class SimpleSwitch {
                     Message m = sendQueue.take();
                     Cache c = cache.get(m.frame.destination);
                     if (c != null && Duration.between(c.updated, Instant.now()).compareTo(cacheTime) > 0) {
+//                        System.out.println("Forgot " + m.frame.destination);
                         cache.remove(m.frame.destination);
                         c = null;
                     }
@@ -62,6 +63,7 @@ public class SimpleSwitch {
                         if (port != null) {
                             port.channel.send(m.frame);
                         } else {
+//                            System.out.println("Forgot " + m.frame.destination);
                             cache.remove(m.frame.destination);
                             sendQueue.add(m); // try sending again
                         }
@@ -80,6 +82,7 @@ public class SimpleSwitch {
                 while (true) {
                     EthernetFrame m = channel.receive();
 //                    System.out.println("Received on port " + port);
+//                    System.out.println("Learnt " + m.source + " is on port " + port);
                     cache.put(m.source, new Cache(port, Instant.now()));
                     sendQueue.add(new Message(m, port));
                 }
