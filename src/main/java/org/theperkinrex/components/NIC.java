@@ -10,26 +10,26 @@ import org.theperkinrex.util.DuplexChannel;
 import org.theperkinrex.util.Util;
 
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class NIC implements Iface<MAC> {
     public record PayloadWithDest(NetPacket payload, MAC dest){}
 
     private final MAC mac;
     private final BlockingQueue<PayloadWithDest> sendQueue;
-    private final BlockingQueue<EthernetFrame> recvQueue;
+    private final ConcurrentMap<Class<? extends NetPacket>, BlockingQueue<PacketAddr<? extends NetPacket, MAC>>> recvQueue;
     private DuplexChannel<EthernetFrame> conn;
     private final Thread sender;
     private final Thread receiver;
+
+    private final Semaphore connectSemaphore;
 
     public NIC(MAC mac) {
         this.mac = mac;
         this.conn = null;
         this.sendQueue = new LinkedBlockingQueue<>();
-        this.recvQueue = new LinkedBlockingQueue<>();
+        this.recvQueue = new ConcurrentHashMap<>();
+        this.connectSemaphore = new Semaphore(0);
         this.sender = new Thread(sender());
         this.receiver = new Thread(receiver());
     }
@@ -42,16 +42,18 @@ public class NIC implements Iface<MAC> {
 
     public void connect(DuplexChannel<EthernetFrame> channel) {
         this.conn = channel;
+        connectSemaphore.release();
     }
 
     public EthernetFrame receiveFrame() throws InterruptedException {
-        if (this.conn == null)return null;
+        connectSemaphore.acquire();
         EthernetFrame frame = null;
         do {
             frame = this.conn.receive();
 //            System.out.println(mac +  " Received frame [" + frame.destination.equals(mac) + "]: " + frame);
         } while (!frame.destination.equals(mac));
 //        System.out.println("Is correct");
+        connectSemaphore.release();
         return frame;
     }
 
@@ -59,15 +61,8 @@ public class NIC implements Iface<MAC> {
     @SuppressWarnings("unchecked")
     public <P extends NetPacket> PacketAddr<P, MAC> receive(Class<P> packetType) throws InterruptedException {
         EthernetFrame.EtherType etherType = NetPacket.ethertypeForClass(packetType);
-        while(true) {
-            EthernetFrame frame = recvQueue.take();
-            if(frame.etherType.equals(etherType)) {
-                return new PacketAddr<>((P) frame.payload, frame.destination);
-            }else{
-                recvQueue.add(frame);
-            }
-        }
-
+        var p =  recvQueue.computeIfAbsent(packetType, k -> new LinkedBlockingQueue<>()).take();
+        return new PacketAddr<>((P) p.packet(), p.addr());
     }
 
     @Override
@@ -97,6 +92,7 @@ public class NIC implements Iface<MAC> {
 
     private Runnable receiver() {
         return () -> {
+//            int counter = 100;
             while(true) {
                 EthernetFrame frame;
                 try {
@@ -104,11 +100,19 @@ public class NIC implements Iface<MAC> {
                 } catch (InterruptedException e) {
                     break;
                 }
-                if (frame == null) {
-                    Thread.yield();
-                    continue;
-                }
-                recvQueue.add(frame);
+//                if (frame == null) {
+//                    try {
+//                        Thread.sleep(counter);
+//                        counter *= 2;
+//                    } catch (InterruptedException e) {
+//                        break;
+//                    }
+//                    continue;
+//                }
+//                counter = 100;
+                recvQueue
+                        .computeIfAbsent(frame.payload.getClass(), k -> new LinkedBlockingQueue<>())
+                        .add(new PacketAddr<>(frame.payload, frame.source));
             }
         };
     }

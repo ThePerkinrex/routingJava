@@ -10,8 +10,8 @@ import org.theperkinrex.util.Pair;
 import java.util.Set;
 
 public interface Router<A extends NetAddr> {
-    Set<Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>> getRoutes(A addr);
+    Set<NextHop<A>> getRoutes(A addr);
 
     @Nullable
-    Pair<Chassis.IfaceId<Iface<LinkAddr>>, A> getRoute(A addr);
+    A getRoute(A addr);
 }

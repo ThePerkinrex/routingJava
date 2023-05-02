@@ -16,37 +16,43 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class RoutingTable<A extends NetAddr> implements Router<A> {
-    private final ConcurrentNavigableMap<Pair<A, NetMask<A>>, Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>> table;
+    private final ConcurrentNavigableMap<Pair<A, NetMask<A>>, NextHop<A>> table;
 
     public RoutingTable() {
-        table = new ConcurrentSkipListMap<>((o1, o2) -> o2.u.order() - o1.u.order());
+        table = new ConcurrentSkipListMap<>((o1, o2) -> {
+            int res = o2.u.order() - o1.u.order();
+            if (res == 0) {
+                res = o2.t.hashCode() - o1.t.hashCode();
+            }
+            return res;
+        });
     }
 
-    private void add(A addr, NetMask<A> mask, Chassis.IfaceId<Iface<LinkAddr>> ifaceId, NextHop<A> nextHop) {
-        table.put(new Pair<>(addr, mask), new Pair<>(ifaceId, nextHop));
+    private void add(A addr, NetMask<A> mask, NextHop<A> nextHop) {
+        table.put(new Pair<>(addr, mask), nextHop);
     }
 
-    public <LA extends LinkAddr,I extends Iface<LA>> void add(A addr, NetMask<A> mask, Chassis.IfaceId<I> ifaceId, A nextHop) {
-        add(addr, mask, (Chassis.IfaceId<Iface<LinkAddr>>) ifaceId, NextHop.to(nextHop));
+    public void add(A addr, NetMask<A> mask, A nextHop) {
+        add(addr, mask, NextHop.to(nextHop));
     }
 
-    public <LA extends LinkAddr,I extends Iface<LA>> void add(A addr, NetMask<A> mask, Chassis.IfaceId<I> ifaceId) {
-        add(addr, mask,(Chassis.IfaceId<Iface<LinkAddr>>)  ifaceId, NextHop.direct());
+    public void add(A addr, NetMask<A> mask) {
+        add(addr, mask, NextHop.direct());
     }
 
     public void print() {
-        for (Map.Entry<Pair<A, NetMask<A>>, Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>> entry : table.entrySet()) {
+        for (Map.Entry<Pair<A, NetMask<A>>, NextHop<A>> entry : table.entrySet()) {
 
             System.out.println(entry.getKey().t.toString() + entry.getKey().u.toString() + " -> " + entry.getValue());
         }
     }
 
-    private class RoutePredicate implements Predicate<Map.Entry<Pair<A, NetMask<A>>, Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>>> {
+    private class RoutePredicate implements Predicate<Map.Entry<Pair<A, NetMask<A>>,NextHop<A>>> {
         private NetMask<A> currentMask;
 
 
         @Override
-        public boolean test(Map.Entry<Pair<A, NetMask<A>>, Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>> entry) {
+        public boolean test(Map.Entry<Pair<A, NetMask<A>>, NextHop<A>> entry) {
             boolean r = currentMask == null || currentMask.order() == entry.getKey().u.order();
             if(currentMask == null) currentMask = entry.getKey().u;
             return r;
@@ -57,7 +63,7 @@ public class RoutingTable<A extends NetAddr> implements Router<A> {
         }
     }
 
-    public Set<Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>> getRoutes(A addr) {
+    public Set<NextHop<A>> getRoutes(A addr) {
         return table
                 .entrySet()
                 .stream()
@@ -69,10 +75,10 @@ public class RoutingTable<A extends NetAddr> implements Router<A> {
     }
 
     @Nullable
-    public Pair<Chassis.IfaceId<Iface<LinkAddr>>, A> getRoute(A addr) {
-        Set<Pair<Chassis.IfaceId<Iface<LinkAddr>>, NextHop<A>>> routes = getRoutes(addr);
+    public A getRoute(A addr) {
+        Set<NextHop<A>> routes = getRoutes(addr);
         if (routes.isEmpty()) return null;
-        return routes.iterator().next().map((a,b) -> new Pair<>(a, b.unwrapOr(addr)));
+        return routes.iterator().next().unwrapOr(addr);
     }
 
     @Override

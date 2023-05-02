@@ -5,10 +5,16 @@ import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.link.mac.authority.MACAuthority;
 import org.theperkinrex.layers.net.arp.ArpProcess;
+import org.theperkinrex.layers.net.ipv4.IPv4Addr;
+import org.theperkinrex.layers.net.ipv4.IPv4Process;
 import org.theperkinrex.process.Process;
+import org.theperkinrex.routing.RoutingTable;
 import org.theperkinrex.util.Pair;
+import org.theperkinrex.util.ProcessManager;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class Chassis implements Process {
     public static class IfaceId<I extends Iface<? extends LinkAddr>> {
@@ -55,8 +61,9 @@ public class Chassis implements Process {
         }
     }
 
-    private final HashMap<Class<? extends Iface<? extends LinkAddr>>, ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>>> interfaces;
+    private final ConcurrentMap<Class<? extends Iface<? extends LinkAddr>>, ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>>> interfaces;
     public final ArpProcess arp;
+    public final ProcessManager processes;
     private boolean started;
 
     @SuppressWarnings("unchecked")
@@ -64,10 +71,11 @@ public class Chassis implements Process {
         Class<? extends Iface<LinkAddr>> c = (Class<? extends Iface<LinkAddr>>) iface.getClass();
         ArrayList<IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>>> ifaces = interfaces.computeIfAbsent(c, k -> new ArrayList<>());
         int idx = ifaces.size();
-        IfaceData<? extends LinkAddr, ? extends Iface<? extends LinkAddr>> data = new IfaceData<>((Iface<LinkAddr>) iface, new IfaceConf());
+        IfaceData<LinkAddr, Iface<LinkAddr>> data = new IfaceData<>((Iface<LinkAddr>) iface, new IfaceConf());
         ifaces.add(data);
         IfaceId<I> ifaceId = new IfaceId<>((Class<I>) iface.getClass(), idx);
-        this.arp.registerIface(ifaceId, (IfaceData<LinkAddr, Iface<LinkAddr>>) data);
+        this.arp.registerIface(ifaceId, data);
+        this.processes.registerIface(ifaceId, data);
         if (started) iface.start();
         return ifaceId;
     }
@@ -95,8 +103,9 @@ public class Chassis implements Process {
     }
 
     public Chassis() {
-        this.interfaces = new HashMap<>();
+        this.interfaces = new ConcurrentHashMap<>();
         this.arp = new ArpProcess(this);
+        this.processes = new ProcessManager();
         this.started = false;
     }
 
@@ -104,6 +113,7 @@ public class Chassis implements Process {
     public void start() {
         this.started = true;
         this.arp.start();
+        this.processes.start();
         for (Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>> p : ifaces()) {
             p.u.iface.start();
         }
@@ -113,6 +123,7 @@ public class Chassis implements Process {
     public void stop() {
         this.started = false;
         this.arp.stop();
+        this.processes.stop();
         for (Pair<IfaceId<? extends Iface<? extends LinkAddr>>, IfaceData<LinkAddr, Iface<LinkAddr>>> p : ifaces()) {
             p.u.iface.stop();
         }
@@ -124,11 +135,17 @@ public class Chassis implements Process {
         return res;
     }
 
-    public static Chassis Router3NIC(MACAuthority auth) {
+    public static Chassis IPv4Router3NIC(MACAuthority auth, IPv4Addr a, IPv4Addr.Mask amask, IPv4Addr b, IPv4Addr.Mask bmask, IPv4Addr c, IPv4Addr.Mask cmask) {
         Chassis res = new Chassis();
-        res.addIface(new NIC(auth.next()));
-        res.addIface(new NIC(auth.next()));
-        res.addIface(new NIC(auth.next()));
+        RoutingTable<IPv4Addr> routing = new RoutingTable<>();
+        routing.add(a, amask);
+        res.getIface(res.addIface(new NIC(auth.next()))).conf().add(a);
+        routing.add(b, bmask);
+        res.getIface(res.addIface(new NIC(auth.next()))).conf().add(b);
+        routing.add(c, cmask);
+        res.getIface(res.addIface(new NIC(auth.next()))).conf().add(c);
+        res.processes.add(new IPv4Process(res, routing));
+        routing.print();
         return res;
     }
 }

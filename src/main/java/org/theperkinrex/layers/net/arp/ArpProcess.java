@@ -5,6 +5,7 @@ import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.arp.ArpPacket;
+import org.theperkinrex.process.IfaceRegistry;
 import org.theperkinrex.process.Process;
 import org.theperkinrex.util.Pair;
 
@@ -14,7 +15,7 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
-public class ArpProcess implements Process {
+public class ArpProcess implements Process, IfaceRegistry {
     private class ArpReceiver implements Runnable {
         public ArpReceiver(Chassis.IfaceData<LinkAddr, Iface<LinkAddr>> ifaceData, Chassis.IfaceId<? extends Iface<? extends LinkAddr>> id) {
             this.ifaceData = ifaceData;
@@ -83,7 +84,7 @@ public class ArpProcess implements Process {
         for (Pair<Chassis.IfaceId<? extends Iface<? extends LinkAddr>>, Chassis.IfaceData<LinkAddr, Iface<LinkAddr>>> iface : chassis.ifaces()) {
 //            System.out.println(addr + " | Trying sending through " + iface.t + " [" + addr.getClass() + "]");
             NetAddr self = iface.u.conf().getAddr(addr.getClass());
-            if (self != null) {
+            if (self != null && iface.u.iface().state().equals(Iface.State.UP)) {
 //                System.out.println(addr + " | Sending through " + iface.t + " [" + self+ "]");
                 ArpPacket packet = ArpPacket.Request(iface.u.iface().addr(), self, addr);
                 iface.u.iface().send(packet, iface.u.iface().addr().broadcast());
