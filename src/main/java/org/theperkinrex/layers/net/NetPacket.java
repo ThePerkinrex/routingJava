@@ -2,7 +2,7 @@ package org.theperkinrex.layers.net;
 
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.net.arp.ArpPacket;
-import org.theperkinrex.layers.net.ipv4.IPv4Packet;
+import org.theperkinrex.layers.net.ip.v4.IPv4Packet;
 
 public interface NetPacket {
     EthernetFrame.EtherType etherType();

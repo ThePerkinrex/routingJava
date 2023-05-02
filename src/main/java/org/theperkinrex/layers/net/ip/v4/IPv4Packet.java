@@ -1,4 +1,4 @@
-package org.theperkinrex.layers.net.ipv4;
+package org.theperkinrex.layers.net.ip.v4;
 
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.net.NetPacket;

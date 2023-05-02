@@ -1,10 +1,9 @@
-package org.theperkinrex.layers.net.ipv4;
+package org.theperkinrex.layers.net.ip.v4;
 
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.NetMask;
 
-import java.text.ParseException;
 import java.util.Scanner;
 
 import static java.lang.Math.max;

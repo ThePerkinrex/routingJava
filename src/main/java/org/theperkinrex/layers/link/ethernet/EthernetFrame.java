@@ -3,7 +3,7 @@ package org.theperkinrex.layers.link.ethernet;
 import org.theperkinrex.layers.link.LinkFrame;
 import org.theperkinrex.layers.link.mac.MAC;
 import org.theperkinrex.layers.net.NetPacket;
-import org.theperkinrex.layers.net.ipv4.IPv4Packet;
+import org.theperkinrex.layers.net.ip.v4.IPv4Packet;
 
 public class EthernetFrame implements LinkFrame {
     public final NetPacket payload;

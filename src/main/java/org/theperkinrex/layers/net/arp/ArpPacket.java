@@ -2,10 +2,8 @@ package org.theperkinrex.layers.net.arp;
 
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
-import org.theperkinrex.layers.link.mac.MAC;
 import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.NetPacket;
-import org.theperkinrex.layers.net.ipv4.IPv4Addr;
 
 public class ArpPacket implements NetPacket {
     public enum Operation {

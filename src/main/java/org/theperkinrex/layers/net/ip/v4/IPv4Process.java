@@ -1,24 +1,20 @@
-package org.theperkinrex.layers.net.ipv4;
+package org.theperkinrex.layers.net.ip.v4;
 
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
-import org.theperkinrex.layers.net.arp.ArpProcess;
+import org.theperkinrex.layers.net.ip.PacketAddr;
 import org.theperkinrex.layers.transport.TransportSegment;
 import org.theperkinrex.process.IfaceRegistry;
 import org.theperkinrex.process.Process;
 import org.theperkinrex.routing.RouteNotFoundException;
 import org.theperkinrex.routing.Router;
-import org.theperkinrex.util.Pair;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class IPv4Process implements Process, IfaceRegistry {
-    public record PacketAddr<P extends TransportSegment>(P payload, IPv4Addr onAddrReceived, IPv4Addr source) {}
-
     private class Receiver implements Runnable {
         private final Chassis.IfaceData<LinkAddr, Iface<LinkAddr>> ifaceData;
         private final Chassis.IfaceId<? extends Iface<? extends LinkAddr>> id;
@@ -94,7 +90,7 @@ public class IPv4Process implements Process, IfaceRegistry {
         iface.iface().send(new IPv4Packet(payload, destination, iface.conf().getAddr(IPv4Addr.class)), arp_reply.t);
     }
 
-    public <S extends TransportSegment> PacketAddr<S> receive(Class<S> c) throws InterruptedException {
+    public <S extends TransportSegment> PacketAddr<S, IPv4Addr> receive(Class<S> c) throws InterruptedException {
         while(true) {
             IPv4Packet p = recvQueue.take();
             if (p.payload.getClass().equals(c)) {
