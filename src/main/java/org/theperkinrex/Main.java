@@ -6,14 +6,20 @@ import org.theperkinrex.components.SimpleSwitch;
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.link.mac.authority.MACAuthority;
 import org.theperkinrex.layers.link.mac.authority.SequentialAuthority;
+import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.ip.v4.IPv4Addr;
 import org.theperkinrex.layers.net.ip.v4.IPv4Process;
 import org.theperkinrex.layers.transport.SimpleSegment;
+import org.theperkinrex.layers.transport.icmp.ICMP;
+import org.theperkinrex.routing.RouteNotFoundException;
 import org.theperkinrex.routing.RoutingTable;
 import org.theperkinrex.util.DuplexChannel;
 
 import java.text.ParseException;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.TemporalUnit;
+import java.util.Random;
 
 public class Main {
     private static class Receiver implements Runnable {
@@ -35,6 +41,46 @@ public class Main {
                 }
             }
             System.out.println("Stopping receiver " + name);
+        }
+    }
+
+    private static String formatPingRTT(Duration d) {
+        return String.format("%ds %dms %dus %dns",d.toSeconds(), (d.toNanosPart() / 1000000), (d.toNanosPart() / 1000) % 1000,d.toNanosPart() % 1000);
+    }
+
+    public static <A extends NetAddr> void ping(ICMP<A> icmp, A addr, int n) {
+        int id = new Random().nextInt();
+        for (int i = 0; i < n; i++) {
+            try {
+                Instant start = Instant.now();
+                int ttl = ((int) icmp.echo(id, i, addr)) & 0xff;
+                Instant end = Instant.now();
+                System.out.println(i + ": Echo to " + addr + "; rtt " + formatPingRTT(Duration.between(start, end)) + "; ttl " + ttl);
+            } catch (InterruptedException e) {
+                System.out.println("Interrupted");
+                break;
+            } catch (RouteNotFoundException e) {
+                System.out.println(i + ": route to " + addr + " not found");
+            }
+        }
+    }
+
+    public static <A extends NetAddr> void traceroute(ICMP<A> icmp, A dest) {
+        int i = 0;
+        A current = null;
+        while(!dest.equals(current)) {
+            try {
+                current = icmp.limitedTTLSegment(new SimpleSegment(null), dest, (byte) i);
+                System.out.println(i + " | " + current);
+                i++;
+            } catch (InterruptedException e) {
+                System.out.println("Interrupted");
+                break;
+            } catch (RouteNotFoundException e) {
+                System.out.println("route to " + dest + " not found");
+                break;
+            }
+
         }
     }
 
@@ -87,6 +133,8 @@ public class Main {
 
 //        a.getIface(ID).iface().send(new SimplePacket("Hola"), new MAC("00-00-69-00-00-02"));
         try {
+            ping(a.processes.get(IPv4Process.class, 0).icmp, new IPv4Addr("200.10.0.2"), 5);
+            traceroute(a.processes.get(IPv4Process.class, 0).icmp, new IPv4Addr("200.10.0.2"));
             a.processes.get(IPv4Process.class, 0).send(new SimpleSegment("Hola"), new IPv4Addr("200.10.0.2"));
             a.processes.get(IPv4Process.class, 0).send(new SimpleSegment("Adios"), new IPv4Addr("200.0.0.3"));
         } catch (Exception e) {
