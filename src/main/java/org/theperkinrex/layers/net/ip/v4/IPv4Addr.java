@@ -83,6 +83,11 @@ public class IPv4Addr implements NetAddr {
     }
 
     @Override
+    public boolean isBroadcast() {
+        return addr == 0xff_ff_ff_ff;
+    }
+
+    @Override
     public String name() {
         return "inet";
     }

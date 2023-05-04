@@ -11,9 +11,11 @@ import org.theperkinrex.layers.net.ip.v4.IPv4Addr;
 import org.theperkinrex.layers.net.ip.v4.IPv4Process;
 import org.theperkinrex.layers.transport.SimpleSegment;
 import org.theperkinrex.layers.transport.icmp.ICMP;
+import org.theperkinrex.layers.transport.udp.UdpProcess;
 import org.theperkinrex.routing.RouteNotFoundException;
 import org.theperkinrex.routing.RoutingTable;
 import org.theperkinrex.util.DuplexChannel;
+import org.theperkinrex.util.listener.ListenerMap;
 
 import java.text.ParseException;
 import java.time.Duration;
@@ -84,7 +86,7 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) throws ParseException {
+    public static void main(String[] args) throws ParseException, ListenerMap.PortAlreadyInUseException {
         MACAuthority auth = new SequentialAuthority(0x00_00_69);
         Chassis.IfaceId<NIC> ID = new Chassis.IfaceId<>(NIC.class, 0);
         Chassis a = Chassis.SingleNIC(auth);
@@ -93,6 +95,10 @@ public class Main {
         routing_a.add(new IPv4Addr("0.0.0.0"), new IPv4Addr.Mask((byte) 0), new IPv4Addr("200.0.0.1"));
         a.processes.add(new IPv4Process(a, routing_a));
         a.getIface(ID).conf().add(new IPv4Addr("200.0.0.2"));
+        a.processes.add(new UdpProcess(a));
+        a.processes.get(UdpProcess.class, 0).registerListener((short) 67, (sourceAddr,sourcePort,payload) -> {
+
+        });
         Chassis b = Chassis.SingleNIC(auth);
         RoutingTable<IPv4Addr> routing_b = new RoutingTable<>();
         routing_b.add(new IPv4Addr("200.0.0.0"), new IPv4Addr.Mask((byte) 24));
