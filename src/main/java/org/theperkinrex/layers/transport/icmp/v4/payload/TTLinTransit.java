@@ -19,4 +19,9 @@ public class TTLinTransit extends ICMPv4Payload {
 	public TTLinTransit(IPv4Packet header) {
 		this(IPv4Header.fromPacket(header));
 	}
+
+	@Override
+	public String toString() {
+		return "TTLinTransit{" + "header=" + header + '}';
+	}
 }

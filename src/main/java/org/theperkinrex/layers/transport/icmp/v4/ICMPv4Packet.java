@@ -14,4 +14,9 @@ public class ICMPv4Packet implements TransportSegment {
 	public IPv4Packet.Protocol protocol() {
 		return IPv4Packet.Protocol.ICMP;
 	}
+
+	@Override
+	public String toString() {
+		return payload.toString();
+	}
 }

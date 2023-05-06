@@ -10,4 +10,9 @@ public class EchoRequest extends ICMPv4Payload {
 		this.id = id;
 		this.seq = seq;
 	}
+
+	@Override
+	public String toString() {
+		return "EchoRequest{" + "id=" + id + ", seq=" + seq + '}';
+	}
 }

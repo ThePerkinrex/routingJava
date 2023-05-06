@@ -51,6 +51,10 @@ public class ProcessManager implements Process, IfaceRegistry {
         }
     }
 
+    public <P> P get(Class<P> c) {
+        return get(c, 0);
+    }
+
     @Override
     public void registerIface(Chassis.IfaceId<? extends Iface<? extends LinkAddr>> ifaceId, Chassis.IfaceData<LinkAddr, Iface<LinkAddr>> ifaceData) {
         try {

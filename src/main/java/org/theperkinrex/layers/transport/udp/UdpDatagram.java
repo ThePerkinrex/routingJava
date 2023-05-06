@@ -18,4 +18,10 @@ public class UdpDatagram implements TransportSegment {
 	public IPv4Packet.Protocol protocol() {
 		return IPv4Packet.Protocol.UDP;
 	}
+
+	@Override
+	public String toString() {
+		return "UdpDatagram{" + "sourcePort=" + sourcePort + ", destinationPort=" + destinationPort + ", payload=" +
+				payload + '}';
+	}
 }

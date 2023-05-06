@@ -3,6 +3,7 @@ package org.theperkinrex.layers.net.ip.v4;
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.iface.Iface;
 import org.theperkinrex.layers.link.LinkAddr;
+import org.theperkinrex.layers.net.ip.IpProcess;
 import org.theperkinrex.layers.net.ip.PacketAddr;
 import org.theperkinrex.layers.transport.TransportSegment;
 import org.theperkinrex.layers.transport.icmp.ICMP;
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class IPv4Process implements Process, IfaceRegistry {
+public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> {
     private class Receiver implements Runnable {
         private final Chassis.IfaceData<LinkAddr, Iface<LinkAddr>> ifaceData;
         private final Chassis.IfaceId<? extends Iface<? extends LinkAddr>> id;

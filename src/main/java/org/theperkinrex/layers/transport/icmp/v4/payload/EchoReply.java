@@ -10,4 +10,9 @@ public class EchoReply extends ICMPv4Payload {
 		this.id = id;
 		this.seq = seq;
 	}
+
+	@Override
+	public String toString() {
+		return "EchoReply{" + "id=" + id + ", seq=" + seq + '}';
+	}
 }

@@ -52,7 +52,7 @@ public class UdpProcess implements Process {
 		listeners = new ConcurrentHashMap<>();
 		var p = chassis.processes.get(IPv4Process.class, 0);
 		if (p != null) {
-			ipV4receiver = new Thread(new UdpReceiver<>((IpProcess<IPv4Addr>) p));
+			ipV4receiver = new Thread(new UdpReceiver<>(p));
 		}
 	}
 

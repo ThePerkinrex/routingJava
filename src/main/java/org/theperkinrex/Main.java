@@ -12,6 +12,9 @@ import org.theperkinrex.layers.net.ip.v4.IPv4Process;
 import org.theperkinrex.layers.transport.SimpleSegment;
 import org.theperkinrex.layers.transport.icmp.ICMP;
 import org.theperkinrex.layers.transport.udp.UdpProcess;
+import org.theperkinrex.net.udp.UdpClientStream;
+import org.theperkinrex.net.udp.UdpListener;
+import org.theperkinrex.net.udp.UdpStream;
 import org.theperkinrex.routing.RouteNotFoundException;
 import org.theperkinrex.routing.RoutingTable;
 import org.theperkinrex.util.DuplexChannel;
@@ -96,9 +99,6 @@ public class Main {
         a.processes.add(new IPv4Process(a, routing_a));
         a.getIface(ID).conf().add(new IPv4Addr("200.0.0.2"));
         a.processes.add(new UdpProcess(a));
-        a.processes.get(UdpProcess.class, 0).registerListener((short) 67, (sourceAddr,sourcePort,payload) -> {
-
-        });
         Chassis b = Chassis.SingleNIC(auth);
         RoutingTable<IPv4Addr> routing_b = new RoutingTable<>();
         routing_b.add(new IPv4Addr("200.0.0.0"), new IPv4Addr.Mask((byte) 24));
@@ -110,6 +110,7 @@ public class Main {
         routing_c.add(new IPv4Addr("200.10.0.0"), new IPv4Addr.Mask((byte) 24));
         routing_c.add(new IPv4Addr("0.0.0.0"), new IPv4Addr.Mask((byte) 0), new IPv4Addr("200.10.0.1"));
         c.processes.add(new IPv4Process(c, routing_c));
+        c.processes.add(new UdpProcess(c));
         c.getIface(ID).conf().add(new IPv4Addr("200.10.0.2"));
         a.start();
         b.start();
@@ -141,8 +142,14 @@ public class Main {
         try {
             ping(a.processes.get(IPv4Process.class, 0).icmp, new IPv4Addr("200.10.0.2"), 5);
             traceroute(a.processes.get(IPv4Process.class, 0).icmp, new IPv4Addr("200.10.0.2"));
-            a.processes.get(IPv4Process.class, 0).send(new SimpleSegment("Hola"), new IPv4Addr("200.10.0.2"));
-            a.processes.get(IPv4Process.class, 0).send(new SimpleSegment("Adios"), new IPv4Addr("200.0.0.3"));
+            UdpListener listener = new UdpListener(a.processes.get(UdpProcess.class), (short) 68);
+            UdpStream c_stream = new UdpClientStream((short) 67, (short) 68, new IPv4Addr("200.10.0.2"), new IPv4Addr("200.0.0.2"), c.processes.get(UdpProcess.class));
+            c_stream.send("Hola");
+            UdpStream a_stream = listener.listen();
+            System.out.println(a_stream.receive());
+            a_stream.close();
+            c_stream.close();
+            listener.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
