@@ -35,7 +35,11 @@ public class UdpProcess implements Process {
 				if(listeners.containsKey(datagram.payload().destinationPort)) {
 					var l = listeners.get(datagram.payload().destinationPort);
 					if (l.containsKey(datagram.onAddrReceived())) {
-						l.get(datagram.onAddrReceived()).accept(datagram.source(), datagram.payload().sourcePort, datagram.payload().payload);
+						try {
+							l.get(datagram.onAddrReceived()).accept(datagram.source(), datagram.payload().sourcePort, datagram.payload().payload);
+						} catch (InterruptedException e) {
+							break;
+						}
 					}
 				}
 			}

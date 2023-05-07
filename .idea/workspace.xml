@@ -4,21 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cbab09e0-93f6-4fc8-85e7-d105fab5cae6" name="Changes" comment="udp stream &amp; listener">
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/DhcpMessage.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/DhcpOption.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/ArpCacheTimeout.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/BroadcastAddr.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/DhcpMessageType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/DomainNameServer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/IpLeaseTime.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/IpTtl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/ParamterRequestList.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/RequestedIpAddress.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/Router.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/ServerIdentifier.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/options/SubnetMask.java" afterDir="false" />
+    <list default="true" id="cbab09e0-93f6-4fc8-85e7-d105fab5cae6" name="Changes" comment="dhcp message">
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/Lease.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/Leaser.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/Offer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/SimpleOffer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/contract/Contract.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/contract/lease/DynamicLeaseContract.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/contract/lease/LeaseContract.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/contract/lease/StaticLeaseContract.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/contract/offer/OfferContract.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/exceptions/DhcpException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/exceptions/NoLeasableAddress.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/exceptions/NoOfferedAddress.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/applications/dhcp/leaser/simple/ipv4/SimpleIPv4Leaser.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/application/dhcp/process/DhcpServerProcess.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/net/ip/v4/IPv4Addr.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/theperkinrex/layers/net/ip/v4/IPv4Addr.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,8 +30,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Class" />
         <option value="Interface" />
+        <option value="Class" />
       </list>
     </option>
   </component>
@@ -68,9 +70,11 @@
       <recent name="org.theperkinrex.layers.application.dhcp" />
     </key>
     <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="org.theperkinrex.applications.dhcp.leaser.contract" />
       <recent name="org.theperkinrex.layers.link" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="org.theperkinrex.applications.dhcp.exceptions" />
       <recent name="org.theperkinrex.layers.application.dhcp.options" />
     </key>
   </component>
@@ -117,7 +121,8 @@
       <workItem from="1683098477294" duration="5037000" />
       <workItem from="1683366531183" duration="19000" />
       <workItem from="1683366557104" duration="5194000" />
-      <workItem from="1683393215494" duration="5564000" />
+      <workItem from="1683393215494" duration="6332000" />
+      <workItem from="1683453044620" duration="3434000" />
     </task>
     <task id="LOCAL-00001" summary="intial commit">
       <created>1682545277853</created>
@@ -175,7 +180,14 @@
       <option name="project" value="LOCAL" />
       <updated>1683371288658</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="dhcp message">
+      <created>1683400963786</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1683400963786</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -190,7 +202,8 @@
     <MESSAGE value="aaaaaaaaaaaaa" />
     <MESSAGE value="Broadcast check" />
     <MESSAGE value="udp stream &amp; listener" />
-    <option name="LAST_COMMIT_MESSAGE" value="udp stream &amp; listener" />
+    <MESSAGE value="dhcp message" />
+    <option name="LAST_COMMIT_MESSAGE" value="dhcp message" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/routing$Main.ic" NAME="Main Coverage Results" MODIFIED="1683033812712" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">

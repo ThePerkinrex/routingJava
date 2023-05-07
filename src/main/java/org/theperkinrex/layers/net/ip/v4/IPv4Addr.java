@@ -46,7 +46,7 @@ public class IPv4Addr implements NetAddr {
         }
     }
 
-    private final int addr;
+    public final int addr;
 
     public IPv4Addr(int addr) {
         this.addr = addr;

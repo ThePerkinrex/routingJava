@@ -4,5 +4,5 @@ import org.theperkinrex.layers.net.NetAddr;
 
 @FunctionalInterface
 public interface UdpListener {
-    void accept(NetAddr sourceAddr, short sourcePort, Object payload);
+    void accept(NetAddr sourceAddr, short sourcePort, Object payload) throws InterruptedException;
 }
