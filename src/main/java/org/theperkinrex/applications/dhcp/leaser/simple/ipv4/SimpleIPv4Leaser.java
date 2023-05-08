@@ -60,7 +60,7 @@ public class SimpleIPv4Leaser implements Leaser<IPv4Addr>  {
 		}
 		mutex.unlock();
 		if(found == null) throw new NoLeasableAddress();
-		return new SimpleOffer<>(found);
+		return new SimpleOffer<>(found, leaseTime);
 	}
 
 	@Override

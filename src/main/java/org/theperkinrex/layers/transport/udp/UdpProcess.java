@@ -16,81 +16,82 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class UdpProcess implements Process {
-	private class UdpReceiver<A extends NetAddr> implements Runnable {
-		private final IpProcess<A> process;
+    private final Chassis chassis;
+    private final ConcurrentMap<Short, ListenerMap<NetAddr, UdpListener>> listeners;
+    private Thread ipV4receiver = null;
 
-		public UdpReceiver(IpProcess<A> process) {
-			this.process = process;
-		}
+    public UdpProcess(Chassis chassis) {
+        this.chassis = chassis;
+        listeners = new ConcurrentHashMap<>();
+        var p = chassis.processes.get(IPv4Process.class, 0);
+        if (p != null) {
+            ipV4receiver = new Thread(new UdpReceiver<>(p));
+        }
+    }
 
-		@Override
-		public void run() {
-			while(true) {
-				PacketAddr<UdpDatagram, A> datagram;
-				try {
-					datagram = process.receive(UdpDatagram.class);
-				} catch (InterruptedException e) {
-					break;
-				}
-				if(listeners.containsKey(datagram.payload().destinationPort)) {
-					var l = listeners.get(datagram.payload().destinationPort);
-					if (l.containsKey(datagram.onAddrReceived())) {
-						try {
-							l.get(datagram.onAddrReceived()).accept(datagram.source(), datagram.payload().sourcePort, datagram.payload().payload);
-						} catch (InterruptedException e) {
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
+    public void registerListener(NetAddr addr, short port, UdpListener listener) throws ListenerMap.PortAlreadyInUseException {
+        listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).put(addr, listener);
+    }
 
-	private final Chassis chassis;
-	private final ConcurrentMap<Short, ListenerMap<NetAddr, UdpListener>> listeners;
+    public void registerListener(short port, UdpListener listener) throws ListenerMap.PortAlreadyInUseException {
+        listeners.computeIfAbsent(port, k -> new AnyListenerMap<>()).put(null, listener);
+    }
 
-	private Thread ipV4receiver = null;
+    public void unregisterListener(NetAddr addr, short port) {
+        listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).remove(addr);
+    }
 
-	public UdpProcess(Chassis chassis) {
-		this.chassis = chassis;
-		listeners = new ConcurrentHashMap<>();
-		var p = chassis.processes.get(IPv4Process.class, 0);
-		if (p != null) {
-			ipV4receiver = new Thread(new UdpReceiver<>(p));
-		}
-	}
+    public void unregisterListener(short port) {
+        listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).remove(null);
+    }
 
-	public void registerListener(NetAddr addr, short port, UdpListener listener) throws ListenerMap.PortAlreadyInUseException {
-		listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).put(addr, listener);
-	}
+    public void send(Object payload, NetAddr dest, short source, short destination) throws RouteNotFoundException, InterruptedException {
+        if (dest instanceof IPv4Addr ip) {
+            chassis.processes.get(IPv4Process.class, 0).send(new UdpDatagram(source, destination, payload), ip);
+        } else {
+            throw new IllegalArgumentException("Unknown address type");
+        }
+    }
 
-	public void registerListener(short port, UdpListener listener) throws ListenerMap.PortAlreadyInUseException {
-		listeners.computeIfAbsent(port, k -> new AnyListenerMap<>()).put(null, listener);
-	}
+    @Override
+    public void start() {
+        if (ipV4receiver != null) ipV4receiver.start();
+    }
 
-	public void unregisterListener(NetAddr addr, short port) {
-		listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).remove(addr);
-	}
+    @Override
+    public void stop() {
+        if (ipV4receiver != null) ipV4receiver.interrupt();
+    }
 
-	public void unregisterListener(short port) {
-		listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).remove(null);
-	}
+    private class UdpReceiver<A extends NetAddr> implements Runnable {
+        private final IpProcess<A> process;
 
-	public void send(Object payload, NetAddr dest, short source, short destination) throws RouteNotFoundException, InterruptedException {
-		if (dest instanceof IPv4Addr ip) {
-			chassis.processes.get(IPv4Process.class, 0).send(new UdpDatagram(source, destination, payload), ip);
-		}else{
-			throw new IllegalArgumentException("Unknown address type");
-		}
-	}
+        public UdpReceiver(IpProcess<A> process) {
+            this.process = process;
+        }
 
-	@Override
-	public void start() {
-		if(ipV4receiver != null) ipV4receiver.start();
-	}
-
-	@Override
-	public void stop() {
-		if(ipV4receiver != null) ipV4receiver.interrupt();
-	}
+        @Override
+        public void run() {
+            while (true) {
+                PacketAddr<UdpDatagram, A> datagram;
+                try {
+                    datagram = process.receive(UdpDatagram.class);
+                } catch (InterruptedException e) {
+                    break;
+                }
+                if (listeners.containsKey(datagram.payload().destinationPort)) {
+                    var l = listeners.get(datagram.payload().destinationPort);
+                    if (l.containsKey(datagram.onAddrReceived())) {
+                        try {
+                            l.get(datagram.onAddrReceived()).accept(datagram.source(), datagram.payload().sourcePort, datagram.payload().payload, (reply) ->
+                                    send(reply, datagram.source(), datagram.payload().destinationPort, datagram.payload().sourcePort)
+                            );
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

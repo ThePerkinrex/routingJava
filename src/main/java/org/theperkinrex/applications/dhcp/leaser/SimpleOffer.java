@@ -2,4 +2,6 @@ package org.theperkinrex.applications.dhcp.leaser;
 
 import org.jetbrains.annotations.NotNull;
 
-public record SimpleOffer<A>(@NotNull A addr) implements Offer<A> {}
+import java.time.Duration;
+
+public record SimpleOffer<A>(@NotNull A addr, @NotNull Duration time) implements Offer<A> {}

@@ -10,7 +10,7 @@ public interface DhcpOption {
 	int REQUESTED_IP_ADDR = 50;
 	int IP_ADDR_LEASE_TIME = 51;
 	int DHCP_MESSAGE_TYPE = 53;
-	int SERVER_IDENTIFIER = 53;
+	int SERVER_IDENTIFIER = 54;
 	int PARAMETER_REQUEST_LIST = 55;
 	int code();
 }
