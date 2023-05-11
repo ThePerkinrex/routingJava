@@ -53,7 +53,8 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
         if (route == null) throw new RouteNotFoundException(packetGen.getDestination());
         if (route.isBroadcast()) {
             var ifacesOnBroadcast = packetGen.ifacesOnBroadcast();
-            for (Iterator<Pair<Chassis.IfaceId<? extends Iface<? extends LinkAddr>>, Chassis.IfaceData<LinkAddr, Iface<LinkAddr>>>> it = ifacesOnBroadcast == null ? Arrays.stream(chassis.ifaces()).iterator() : ifacesOnBroadcast; it.hasNext(); ) {
+            for (Iterator<Pair<Chassis.IfaceId<? extends Iface<? extends LinkAddr>>, Chassis.IfaceData<LinkAddr, Iface<LinkAddr>>>>
+                 it = ifacesOnBroadcast == null ? Arrays.stream(chassis.ifaces()).iterator() : ifacesOnBroadcast; it.hasNext(); ) {
                 var iface = it.next();
                 iface.u.iface().send(packetGen.getPacket(chassis, iface.t), iface.u.iface().broadcast());
             }
