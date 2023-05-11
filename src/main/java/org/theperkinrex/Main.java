@@ -147,8 +147,10 @@ public class Main {
         try {
             ping(a.processes.get(IPv4Process.class, 0).icmp, new IPv4Addr("200.10.0.2"), 5);
             traceroute(a.processes.get(IPv4Process.class, 0).icmp, new IPv4Addr("200.10.0.2"));
+            System.out.println("Streams");
             UdpListener listener = new UdpListener(a.processes.get(UdpProcess.class), (short) 68);
             UdpStream c_stream = new UdpClientStream((short) 67, (short) 68, new IPv4Addr("200.10.0.2"), new IPv4Addr("200.0.0.2"), c.processes.get(UdpProcess.class));
+            System.out.println("Sending");
             c_stream.send("Hola");
             UdpStream a_stream = listener.listen();
             System.out.println(a_stream.receive());
@@ -175,6 +177,7 @@ public class Main {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        System.out.println("Interrupting");
         arecv.interrupt();
         brecv.interrupt();
         crecv.interrupt();

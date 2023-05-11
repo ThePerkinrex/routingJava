@@ -1,6 +1,7 @@
 package org.theperkinrex.layers.transport.udp;
 
 import org.theperkinrex.components.Chassis;
+import org.theperkinrex.iface.IfaceConfigurer;
 import org.theperkinrex.iface.IfaceNotConfiguredException;
 import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.ip.IpProcess;
@@ -13,6 +14,7 @@ import org.theperkinrex.util.listener.AnyListenerMap;
 import org.theperkinrex.util.listener.ListenerMap;
 import org.theperkinrex.util.listener.ManyListenerMap;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -49,6 +51,14 @@ public class UdpProcess implements Process {
     public void send(Object payload, NetAddr dest, short source, short destination) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
         if (dest instanceof IPv4Addr ip) {
             chassis.processes.get(IPv4Process.class, 0).send(new UdpDatagram(source, destination, payload), ip);
+        } else {
+            throw new IllegalArgumentException("Unknown address type");
+        }
+    }
+
+    public void sendUnconfigured(Object payload, NetAddr dest, short source, short destination, IfaceConfigurer configurer) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
+        if (dest instanceof IPv4Addr ip) {
+            chassis.processes.get(IPv4Process.class, 0).sendUnconfigured(new UdpDatagram(source, destination, payload), ip, configurer);
         } else {
             throw new IllegalArgumentException("Unknown address type");
         }

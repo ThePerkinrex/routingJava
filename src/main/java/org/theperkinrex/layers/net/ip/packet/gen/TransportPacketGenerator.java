@@ -1,5 +1,7 @@
 package org.theperkinrex.layers.net.ip.packet.gen;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.iface.Iface;
 import org.theperkinrex.iface.IfaceNotConfiguredException;
@@ -9,6 +11,9 @@ import org.theperkinrex.layers.net.ip.packet.factory.PacketFactory;
 import org.theperkinrex.layers.net.ip.v4.IPv4Addr;
 import org.theperkinrex.layers.net.ip.v4.IPv4Packet;
 import org.theperkinrex.layers.transport.TransportSegment;
+import org.theperkinrex.util.Pair;
+
+import java.util.Iterator;
 
 public class TransportPacketGenerator<A extends NetAddr, P> implements PacketGenerator<A, P>{
     private final PacketFactory<A, P> factory;
@@ -22,15 +27,20 @@ public class TransportPacketGenerator<A extends NetAddr, P> implements PacketGen
     }
 
     @Override
-    public A getDestination() {
+    public @Nullable Iterator<Pair<Chassis.IfaceId<? extends Iface<? extends LinkAddr>>, Chassis.IfaceData<LinkAddr, Iface<LinkAddr>>>> ifacesOnBroadcast() {
+        return null;
+    }
+
+    @Override
+    public @NotNull A getDestination() {
         return destination;
     }
 
     @Override
-    public P getPacket(Chassis chassis, Chassis.IfaceId<? extends Iface<? extends LinkAddr>> ifaceId) throws IfaceNotConfiguredException {
+    public @NotNull P getPacket(Chassis chassis, Chassis.IfaceId<? extends Iface<? extends LinkAddr>> ifaceId) throws IfaceNotConfiguredException {
         var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) ifaceId);
         var source = iface.conf().getAddr((Class<A>) destination.getClass());
         if (source == null) throw new IfaceNotConfiguredException();
-        return factory.create(source,destination, transportSegment);
+        return factory.create(source, destination, transportSegment);
     }
 }

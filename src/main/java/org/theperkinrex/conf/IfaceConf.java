@@ -1,6 +1,7 @@
 package org.theperkinrex.conf;
 
 import org.jetbrains.annotations.NotNull;
+import org.theperkinrex.iface.IfaceConfigurer;
 import org.theperkinrex.layers.net.NetAddr;
 
 import java.util.Objects;
@@ -8,7 +9,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class IfaceConf {
-    public record Address<A extends NetAddr>(@NotNull A address, Object configurer){
+    public record Address<A extends NetAddr>(@NotNull A address, IfaceConfigurer configurer){
         public <B extends A> Address<B> cast() {
             return new Address<>((B) address(), configurer());
         }
