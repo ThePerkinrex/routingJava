@@ -1,6 +1,7 @@
 package org.theperkinrex.layers.transport.udp;
 
 import org.theperkinrex.components.Chassis;
+import org.theperkinrex.iface.IfaceNotConfiguredException;
 import org.theperkinrex.layers.net.NetAddr;
 import org.theperkinrex.layers.net.ip.IpProcess;
 import org.theperkinrex.layers.net.ip.PacketAddr;
@@ -45,7 +46,7 @@ public class UdpProcess implements Process {
         listeners.computeIfAbsent(port, k -> new ManyListenerMap<>()).remove(null);
     }
 
-    public void send(Object payload, NetAddr dest, short source, short destination) throws RouteNotFoundException, InterruptedException {
+    public void send(Object payload, NetAddr dest, short source, short destination) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
         if (dest instanceof IPv4Addr ip) {
             chassis.processes.get(IPv4Process.class, 0).send(new UdpDatagram(source, destination, payload), ip);
         } else {
@@ -84,7 +85,13 @@ public class UdpProcess implements Process {
                     if (l.containsKey(datagram.onAddrReceived())) {
                         try {
                             l.get(datagram.onAddrReceived()).accept(datagram.source(), datagram.payload().sourcePort, datagram.payload().payload, (reply) ->
-                                    send(reply, datagram.source(), datagram.payload().destinationPort, datagram.payload().sourcePort)
+                                    {
+                                        try {
+                                            send(reply, datagram.source(), datagram.payload().destinationPort, datagram.payload().sourcePort);
+                                        } catch (IfaceNotConfiguredException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
                             );
                         } catch (InterruptedException e) {
                             break;

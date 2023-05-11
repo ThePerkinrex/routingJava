@@ -3,6 +3,7 @@ package org.theperkinrex;
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.components.NIC;
 import org.theperkinrex.components.SimpleSwitch;
+import org.theperkinrex.iface.IfaceNotConfiguredException;
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.link.mac.authority.MACAuthority;
 import org.theperkinrex.layers.link.mac.authority.SequentialAuthority;
@@ -66,6 +67,8 @@ public class Main {
                 break;
             } catch (RouteNotFoundException e) {
                 System.out.println(i + ": route to " + addr + " not found");
+            } catch (IfaceNotConfiguredException e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -84,6 +87,8 @@ public class Main {
             } catch (RouteNotFoundException e) {
                 System.out.println("route to " + dest + " not found");
                 break;
+            } catch (IfaceNotConfiguredException e) {
+                throw new RuntimeException(e);
             }
 
         }

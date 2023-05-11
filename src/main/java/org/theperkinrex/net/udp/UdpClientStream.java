@@ -1,6 +1,7 @@
 package org.theperkinrex.net.udp;
 
 import org.theperkinrex.layers.net.NetAddr;
+import org.theperkinrex.layers.transport.udp.Replier;
 import org.theperkinrex.layers.transport.udp.UdpProcess;
 import org.theperkinrex.util.listener.ListenerMap;
 
@@ -10,7 +11,7 @@ public class UdpClientStream extends UdpStream {
 			throws ListenerMap.PortAlreadyInUseException {
 		super(localPort, remotePort, remoteAddr, udpProcess);
 		this.localAddr = localAddr;
-		udpProcess.registerListener(localAddr, localPort, (NetAddr sourceAddr, short sourcePort, Object payload) -> {
+		udpProcess.registerListener(localAddr, localPort, (NetAddr sourceAddr, short sourcePort, Object payload, Replier r) -> {
 			if (sourceAddr.equals(remoteAddr) && sourcePort == remotePort) {
 				this.recvQueue.add(payload);
 			}else{

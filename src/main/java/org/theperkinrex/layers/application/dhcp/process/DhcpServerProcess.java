@@ -5,6 +5,7 @@ import org.theperkinrex.applications.dhcp.leaser.exceptions.NoLeasedAddress;
 import org.theperkinrex.applications.dhcp.leaser.exceptions.NoOfferedAddress;
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.iface.Iface;
+import org.theperkinrex.iface.IfaceNotConfiguredException;
 import org.theperkinrex.layers.application.dhcp.DhcpMessage;
 import org.theperkinrex.layers.application.dhcp.DhcpOption;
 import org.theperkinrex.layers.application.dhcp.options.*;
@@ -84,6 +85,8 @@ public class DhcpServerProcess implements Process {
 								System.err.println("No leasable address");
 							} catch (RouteNotFoundException e) {
 								System.err.println("No route");
+							} catch (IfaceNotConfiguredException e) {
+								System.err.println("Iface not configured");
 							}
 						}
 						case DHCPDECLINE -> {
@@ -108,6 +111,8 @@ public class DhcpServerProcess implements Process {
 								System.err.println("No offered address");
 							} catch (RouteNotFoundException e) {
 								System.err.println("No route");
+							} catch (IfaceNotConfiguredException e) {
+								System.err.println("Iface not configured");
 							}
 						}
 						case DHCPRELEASE -> {

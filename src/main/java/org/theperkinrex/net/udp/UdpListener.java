@@ -1,5 +1,6 @@
 package org.theperkinrex.net.udp;
 
+import org.theperkinrex.layers.transport.udp.Replier;
 import org.theperkinrex.net.ConnectionClosedException;
 import org.theperkinrex.net.NetListener;
 import org.theperkinrex.net.NetStream;
@@ -42,7 +43,7 @@ public class UdpListener implements NetListener<Object> {
 	}
 
 	private org.theperkinrex.layers.transport.udp.UdpListener listener() {
-		return (NetAddr sourceAddr, short sourcePort, Object payload) -> {
+		return (NetAddr sourceAddr, short sourcePort, Object payload, Replier r) -> {
 			var key = new Pair<>(sourceAddr, sourcePort);
 			if (currentStreams.containsKey(key)) {
 				currentStreams.get(key).recvQueue.add(payload);

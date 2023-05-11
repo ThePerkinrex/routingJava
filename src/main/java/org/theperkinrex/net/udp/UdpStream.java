@@ -1,5 +1,6 @@
 package org.theperkinrex.net.udp;
 
+import org.theperkinrex.iface.IfaceNotConfiguredException;
 import org.theperkinrex.net.ConnectionClosedException;
 import org.theperkinrex.net.NetStream;
 import org.theperkinrex.layers.net.NetAddr;
@@ -27,7 +28,7 @@ public abstract class UdpStream implements NetStream<Object> {
 	}
 
 	@Override
-	public void send(Object payload) throws RouteNotFoundException, InterruptedException, ConnectionClosedException {
+	public void send(Object payload) throws RouteNotFoundException, InterruptedException, ConnectionClosedException, IfaceNotConfiguredException {
 		if (closed) throw new ConnectionClosedException();
 		udpProcess.send(payload, remoteAddr, localPort, remotePort);
 	}

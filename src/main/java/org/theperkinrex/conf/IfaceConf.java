@@ -1,5 +1,6 @@
 package org.theperkinrex.conf;
 
+import org.jetbrains.annotations.NotNull;
 import org.theperkinrex.layers.net.NetAddr;
 
 import java.util.Objects;
@@ -7,17 +8,34 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class IfaceConf {
-    private final ConcurrentHashMap<Class<? extends NetAddr>, NetAddr> addresses;
+    public record Address<A extends NetAddr>(@NotNull A address, Object configurer){
+        public <B extends A> Address<B> cast() {
+            return new Address<>((B) address(), configurer());
+        }
+    }
+
+    private final ConcurrentHashMap<Class<? extends NetAddr>, Address<NetAddr>> addresses;
+
 
     public IfaceConf() {
         addresses = new ConcurrentHashMap<>();
     }
 
     public <A extends NetAddr> A getAddr(Class<A> c) {
-        NetAddr a = addresses.get(c);
+        var a = addresses.get(c);
         if (a!=null) {
-            assert a.getClass().equals(c);
-            return (A) a;
+            assert a.address().getClass().equals(c);
+            return a.configurer() == null ? ((A) a.address()) : null;
+        }else{
+            return null;
+        }
+    }
+
+    public <A extends NetAddr> Address<A> getAddrUnconfigured(Class<A> c) {
+        var a = addresses.get(c);
+        if (a!=null) {
+            assert a.address().getClass().equals(c);
+            return a.cast();
         }else{
             return null;
         }
@@ -28,7 +46,7 @@ public class IfaceConf {
     }
 
     public <A extends NetAddr> void add(A addr) {
-        addresses.put(addr.getClass(), addr);
+        addresses.put(addr.getClass(), new Address<>(addr, null));
     }
 
     @Override
@@ -49,8 +67,8 @@ public class IfaceConf {
     @Override
     public String toString() {
         StringJoiner s = new StringJoiner("\n\t");
-        for(NetAddr a : addresses.values()) {
-            s.add(a.name() + " " + a);
+        for(var a : addresses.values()) {
+            s.add(a.address().name() + (a.configurer() == null ? "" : " CONFIGURING") + " " + a);
         }
         return s.toString();
     }

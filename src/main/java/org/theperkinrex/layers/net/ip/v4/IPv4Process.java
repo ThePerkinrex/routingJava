@@ -2,9 +2,15 @@ package org.theperkinrex.layers.net.ip.v4;
 
 import org.theperkinrex.components.Chassis;
 import org.theperkinrex.iface.Iface;
+import org.theperkinrex.iface.IfaceNotConfiguredException;
 import org.theperkinrex.layers.link.LinkAddr;
 import org.theperkinrex.layers.net.ip.IpProcess;
 import org.theperkinrex.layers.net.ip.PacketAddr;
+import org.theperkinrex.layers.net.ip.packet.factory.IPv4PacketFactory;
+import org.theperkinrex.layers.net.ip.packet.gen.CreatedPacketGenerator;
+import org.theperkinrex.layers.net.ip.packet.gen.PacketGenerator;
+import org.theperkinrex.layers.net.ip.packet.gen.TransportPacketGenerator;
+import org.theperkinrex.layers.net.ip.packet.gen.TransportPacketGeneratorUnconfigured;
 import org.theperkinrex.layers.transport.TransportSegment;
 import org.theperkinrex.layers.transport.icmp.ICMP;
 import org.theperkinrex.layers.transport.icmp.v4.ICMPv4Packet;
@@ -18,6 +24,7 @@ import org.theperkinrex.routing.RouteNotFoundException;
 import org.theperkinrex.routing.Router;
 import org.theperkinrex.util.Pair;
 
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -60,6 +67,9 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
                         e.printStackTrace();
                     } catch (InterruptedException ignored) {
                         break;
+                    } catch (IfaceNotConfiguredException e) {
+                        System.err.println("Iface not configured: " + e);
+                        e.printStackTrace();
                     }
                 }else{
                     try {
@@ -69,6 +79,9 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
                         e.printStackTrace();
                     } catch (InterruptedException e) {
                         break;
+                    } catch (IfaceNotConfiguredException e) {
+                        System.err.println("Iface not configured: " + e);
+                        e.printStackTrace();
                     }
                 }
             }
@@ -102,6 +115,9 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
                             e.printStackTrace();
                         } catch (InterruptedException e) {
                             break;
+                        } catch (IfaceNotConfiguredException e) {
+                            System.err.println("Iface not configured: " + e);
+                            e.printStackTrace();
                         }
                     }else if (payload instanceof EchoReply r) {
                         var c = echoListeners.remove(new Pair<>(r.id, r.seq));
@@ -118,7 +134,7 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
             });
         }
 
-        public byte echo(int id, int seq, IPv4Addr dest) throws InterruptedException, RouteNotFoundException {
+        public byte echo(int id, int seq, IPv4Addr dest) throws InterruptedException, RouteNotFoundException, IfaceNotConfiguredException {
             Semaphore s = new Semaphore(0);
             AtomicReference<Byte> res = new AtomicReference<>((byte) 0);
             this.echoListeners.put(new Pair<>(id, seq), b -> {
@@ -130,7 +146,7 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
             return res.get();
         }
 
-        public IPv4Addr limitedTTLSegment(TransportSegment ts, IPv4Addr dest, byte ttl) throws InterruptedException, RouteNotFoundException {
+        public IPv4Addr limitedTTLSegment(TransportSegment ts, IPv4Addr dest, byte ttl) throws InterruptedException, RouteNotFoundException, IfaceNotConfiguredException {
             Semaphore s = new Semaphore(0);
             AtomicReference<IPv4Addr> res = new AtomicReference<>();
             IPv4Addr route = routingTable.getRoute(dest);
@@ -138,7 +154,8 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
             var arp_reply = chassis.arp.get(route);
             if (arp_reply == null) throw new RouteNotFoundException(dest);
             var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
-            var packet = new IPv4Packet(ts, dest, iface.conf().getAddr(IPv4Addr.class), ttl);
+            var addr = iface.conf().getAddr(IPv4Addr.class);
+            var packet = new IPv4Packet(ts, dest, addr, ttl);
             ttlListeners.put(TTLinTransit.IPv4Header.fromPacket(packet), (droppedAt, d) -> {
                 res.set(droppedAt);
                 s.release();
@@ -174,34 +191,56 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
         this.icmp = new Icmp();
     }
 
-    private void send(IPv4Packet packet) throws RouteNotFoundException, InterruptedException {
-        IPv4Addr route = routingTable.getRoute(packet.destination);
-        if (route == null) throw new RouteNotFoundException(packet.destination);
+    private void send(PacketGenerator<IPv4Addr, IPv4Packet> packetGen) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
+        IPv4Addr route = routingTable.getRoute(packetGen.getDestination());
+        if (route == null) throw new RouteNotFoundException(packetGen.getDestination());
         if (route.isBroadcast()) {
             for(var iface : chassis.ifaces()) {
-                iface.u.iface().send(packet, iface.u.iface().broadcast());
+                iface.u.iface().send(packetGen.getPacket(chassis, iface.t), iface.u.iface().broadcast());
             }
         }else{
             var arp_reply = chassis.arp.get(route);
-            if (arp_reply == null) throw new RouteNotFoundException(packet.destination);
+            if (arp_reply == null) throw new RouteNotFoundException(packetGen.getDestination());
             var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
-            iface.iface().send(packet, arp_reply.t);
+            iface.iface().send(packetGen.getPacket(chassis, arp_reply.u), arp_reply.t);
         }
     }
 
-    public void send(TransportSegment payload, IPv4Addr destination) throws RouteNotFoundException, InterruptedException {
-        IPv4Addr route = routingTable.getRoute(destination);
-        if (route == null) throw new RouteNotFoundException(destination);
-        if (route.isBroadcast()) {
-            for(var iface : chassis.ifaces()) {
-                iface.u.iface().send(new IPv4Packet(payload, destination, iface.u.conf().getAddr(IPv4Addr.class)), iface.u.iface().broadcast());
-            }
-        }else {
-            var arp_reply = chassis.arp.get(route);
-            if (arp_reply == null) throw new RouteNotFoundException(destination);
-            var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
-            iface.iface().send(new IPv4Packet(payload, destination, iface.conf().getAddr(IPv4Addr.class)), arp_reply.t);
-        }
+    private void send(IPv4Packet packet) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
+        send(new CreatedPacketGenerator<>(packet));
+    }
+
+    public void send(TransportSegment payload, IPv4Addr destination) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
+//        IPv4Addr route = routingTable.getRoute(destination);
+//        if (route == null) throw new RouteNotFoundException(destination);
+//        if (route.isBroadcast()) {
+//            for(var iface : chassis.ifaces()) {
+//                iface.u.iface().send(new IPv4Packet(payload, destination, iface.u.conf().getAddr(IPv4Addr.class)), iface.u.iface().broadcast());
+//            }
+//        }else {
+//            var arp_reply = chassis.arp.get(route);
+//            if (arp_reply == null) throw new RouteNotFoundException(destination);
+//            var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
+//            iface.iface().send(new IPv4Packet(payload, destination, iface.conf().getAddr(IPv4Addr.class)), arp_reply.t);
+//        }
+        send(new TransportPacketGenerator<>(new IPv4PacketFactory(), payload, destination));
+    }
+
+    public void sendUnconfigured(TransportSegment payload, IPv4Addr destination, Object configurer) throws RouteNotFoundException, InterruptedException, IfaceNotConfiguredException {
+//        IPv4Addr route = routingTable.getRoute(destination);
+//        if (route == null) throw new RouteNotFoundException(destination);
+//        if (route.isBroadcast()) {
+//            for(var iface : chassis.ifaces()) {
+//                iface.u.iface().send(new IPv4Packet(payload, destination, iface.u.conf().getAddr(IPv4Addr.class)), iface.u.iface().broadcast());
+//            }
+//        }else {
+//            var arp_reply = chassis.arp.get(route);
+//            if (arp_reply == null) throw new RouteNotFoundException(destination);
+//            var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
+//            var a = iface.conf().getAddrUnconfigured(IPv4Addr.class);
+//            iface.iface().send(new IPv4Packet(payload, destination, a.address()), arp_reply.t);
+//        }
+        send(new TransportPacketGeneratorUnconfigured<>(new IPv4PacketFactory(), payload, destination, configurer));
     }
 
     public <S extends TransportSegment> PacketAddr<S, IPv4Addr> receive(Class<S> c) throws InterruptedException {

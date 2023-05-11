@@ -2,9 +2,15 @@ package org.theperkinrex.layers.net.ip.v4;
 
 import org.theperkinrex.layers.link.ethernet.EthernetFrame;
 import org.theperkinrex.layers.net.NetPacket;
+import org.theperkinrex.layers.net.ip.IpPacket;
 import org.theperkinrex.layers.transport.TransportSegment;
 
-public class IPv4Packet implements NetPacket {
+public class IPv4Packet implements NetPacket, IpPacket<IPv4Addr> {
+    @Override
+    public IPv4Addr destination() {
+        return destination;
+    }
+
     public static class Protocol {
         private final byte protocol;
 
