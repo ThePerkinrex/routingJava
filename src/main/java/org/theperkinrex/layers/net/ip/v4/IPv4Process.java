@@ -177,19 +177,31 @@ public class IPv4Process implements Process, IfaceRegistry, IpProcess<IPv4Addr> 
     private void send(IPv4Packet packet) throws RouteNotFoundException, InterruptedException {
         IPv4Addr route = routingTable.getRoute(packet.destination);
         if (route == null) throw new RouteNotFoundException(packet.destination);
-        var arp_reply = chassis.arp.get(route);
-        if (arp_reply == null) throw new RouteNotFoundException(packet.destination);
-        var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
-        iface.iface().send(packet, arp_reply.t);
+        if (route.isBroadcast()) {
+            for(var iface : chassis.ifaces()) {
+                iface.u.iface().send(packet, iface.u.iface().broadcast());
+            }
+        }else{
+            var arp_reply = chassis.arp.get(route);
+            if (arp_reply == null) throw new RouteNotFoundException(packet.destination);
+            var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
+            iface.iface().send(packet, arp_reply.t);
+        }
     }
 
     public void send(TransportSegment payload, IPv4Addr destination) throws RouteNotFoundException, InterruptedException {
         IPv4Addr route = routingTable.getRoute(destination);
         if (route == null) throw new RouteNotFoundException(destination);
-        var arp_reply = chassis.arp.get(route);
-        if (arp_reply == null) throw new RouteNotFoundException(destination);
-        var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
-        iface.iface().send(new IPv4Packet(payload, destination, iface.conf().getAddr(IPv4Addr.class)), arp_reply.t);
+        if (route.isBroadcast()) {
+            for(var iface : chassis.ifaces()) {
+                iface.u.iface().send(new IPv4Packet(payload, destination, iface.u.conf().getAddr(IPv4Addr.class)), iface.u.iface().broadcast());
+            }
+        }else {
+            var arp_reply = chassis.arp.get(route);
+            if (arp_reply == null) throw new RouteNotFoundException(destination);
+            var iface = chassis.getIface((Chassis.IfaceId<Iface<LinkAddr>>) arp_reply.u);
+            iface.iface().send(new IPv4Packet(payload, destination, iface.conf().getAddr(IPv4Addr.class)), arp_reply.t);
+        }
     }
 
     public <S extends TransportSegment> PacketAddr<S, IPv4Addr> receive(Class<S> c) throws InterruptedException {

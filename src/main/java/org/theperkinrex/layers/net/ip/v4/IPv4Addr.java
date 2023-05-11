@@ -12,7 +12,6 @@ import static java.lang.Math.min;
 public class IPv4Addr implements NetAddr {
     public static class Mask implements NetMask<IPv4Addr> {
         private final int mask;
-
         public Mask(IPv4Addr mask) {
             this.mask = mask.addr;
         }
@@ -95,5 +94,9 @@ public class IPv4Addr implements NetAddr {
     @Override
     public EthernetFrame.EtherType etherType() {
         return EthernetFrame.EtherType.IP_V4;
+    }
+
+    public static IPv4Addr broadcast() {
+        return new IPv4Addr(0xff_ff_ff_ff);
     }
 }

@@ -62,8 +62,9 @@ public class DhcpServerProcess implements Process {
 
 	@Override
 	public void start() {
+		var udpProcess = chassis.processes.get(UdpProcess.class);
 		try {
-			chassis.processes.get(UdpProcess.class).registerListener((short) 67, (NetAddr sourceAddr, short sourcePort, Object payload, Replier replier) -> {
+			udpProcess.registerListener((short) 67, (NetAddr sourceAddr, short sourcePort, Object payload, Replier replier) -> {
 				if (sourcePort == 68 && payload instanceof DhcpMessage m) {
 					var options = options(m.options);
 					DhcpMessageType dhcpMessageType = (DhcpMessageType) options.get(DhcpOption.DHCP_MESSAGE_TYPE);
@@ -77,7 +78,8 @@ public class DhcpServerProcess implements Process {
 								var offer = leaser.offer(m.clientHaddr);
 								DhcpMessage reply = DhcpMessage.dhcpOffer(m.xid, m.clientHaddr, offer.addr(), subnetMask,
 										(int) offer.time().getSeconds(), serverAddr, m.secs);
-								replier.sendReply(reply);
+								if(m.broadcastFlag) udpProcess.send(reply, IPv4Addr.broadcast(), (short) 67, (short) 67);
+								else replier.sendReply(reply);
 							} catch (NoLeasableAddress e) {
 								System.err.println("No leasable address");
 							} catch (RouteNotFoundException e) {
@@ -100,7 +102,8 @@ public class DhcpServerProcess implements Process {
 								}
 								DhcpMessage reply = DhcpMessage.dhcpAck(m.xid, m.clientHaddr, lease.addr(), serverAddr, m.secs,
 										getParameters((ParamterRequestList) options.get(DhcpOption.PARAMETER_REQUEST_LIST)));
-								replier.sendReply(reply);
+								if(m.broadcastFlag) udpProcess.send(reply, IPv4Addr.broadcast(), (short) 67, (short) 67);
+								else replier.sendReply(reply);
 							} catch (NoOfferedAddress e) {
 								System.err.println("No offered address");
 							} catch (RouteNotFoundException e) {

@@ -70,6 +70,11 @@ public class NIC implements Iface<MAC> {
         return mac;
     }
 
+    @Override
+    public MAC broadcast() {
+        return MAC.BROADCAST;
+    }
+
     public void send(NetPacket p, MAC dest) {
         sendQueue.add(new PayloadWithDest(p, dest));
     }

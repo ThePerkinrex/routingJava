@@ -5,6 +5,8 @@ import org.theperkinrex.layers.net.NetPacket;
 import org.theperkinrex.process.Process;
 
 public interface Iface<A extends LinkAddr> extends Process {
+    A broadcast();
+
     void send(NetPacket packet, A addr);
 
     record PacketAddr<P extends NetPacket, A extends LinkAddr>(P packet, A addr) {}
