@@ -9,14 +9,33 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class IfaceConf {
-    public record Address<A extends NetAddr>(@NotNull A address, IfaceConfigurer configurer){
+    public class Address<A extends NetAddr> {
+        private final A address;
+        private IfaceConfigurer configurer;
+
+        public Address(@NotNull A address, IfaceConfigurer configurer) {
+            this.address = address;
+            this.configurer = configurer;
+        }
+
         public <B extends A> Address<B> cast() {
             return new Address<>((B) address(), configurer());
+        }
+
+        public A address() {
+            return address;
+        }
+
+        public IfaceConfigurer configurer() {
+            return configurer;
+        }
+
+        public void setConfigurer(IfaceConfigurer conf) {
+            configurer = conf;
         }
     }
 
     private final ConcurrentHashMap<Class<? extends NetAddr>, Address<NetAddr>> addresses;
-
 
     public IfaceConf() {
         addresses = new ConcurrentHashMap<>();

@@ -99,4 +99,8 @@ public class IPv4Addr implements NetAddr {
     public static IPv4Addr broadcast() {
         return new IPv4Addr(0xff_ff_ff_ff);
     }
+
+    public static IPv4Addr defaultAddr() {
+        return new IPv4Addr(0x00_00_00_00);
+    }
 }
